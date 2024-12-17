@@ -14,9 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package v1alpha contains API Schema definitions for the cni.dra.networking.k8s.io
+// Package v1alpha contains API Schema definitions for the cni.dra.networking.x-k8s.io
 // API group.
 //
 // +k8s:deepcopy-gen=package
-// +groupName=cni.dra.networking.k8s.io
+// +groupName=cni.dra.networking.x-k8s.io
 package v1alpha1

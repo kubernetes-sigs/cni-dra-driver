@@ -2,13 +2,13 @@
 
 ## Summary
 
-This document defines the API and mechanism to configure and manage CNI network interfaces in Kubernetes using the CNI DRA Driver `cni.dra.networking.k8s.io`. In addition, it also outlines how the status of these network interfaces (allocated devices) is reported.
+This document defines the API and mechanism to configure and manage CNI network interfaces in Kubernetes using the CNI DRA Driver `cni.dra.networking.x-k8s.io`. In addition, it also outlines how the status of these network interfaces (allocated devices) is reported.
 
 The design aims to support all possible functionalities the Container Network Interface (CNI) project offers while ensuring compliance with its specifications.
 
 ## Design
 
-A new API with the Kind `CNI` will be introduced under the `cni.networking.k8s.io` Group. This API will be providing the CNI configuration along with necessary parameters and optional fields for invoking CNI plugins. The configuration data specified in the `opaque.parameters` will be reflected in the ResourceClaim status by Kubernetes. This reported status will provide the necessary details for executing CNI operations such as `ADD` on pod creation and `DEL` on pod deletion which will enable seamless lifecycle management.
+A new API with the Kind `CNI` will be introduced under the `cni.networking.x-k8s.io` Group. This API will be providing the CNI configuration along with necessary parameters and optional fields for invoking CNI plugins. The configuration data specified in the `opaque.parameters` will be reflected in the ResourceClaim status by Kubernetes. This reported status will provide the necessary details for executing CNI operations such as `ADD` on pod creation and `DEL` on pod deletion which will enable seamless lifecycle management.
 
 Each ResourceClaim can be claimed by at most one pod as the ResourceClaim status represents network interfaces configured specifically for that pod. Since the devices configured via CNI are pod scoped rather than container scoped, the ResourceClaims must be associated at the pod level.
 
@@ -23,9 +23,6 @@ This API defines the parameters and CNI configuration required to invoke CNI plu
 * `Config`: contains the CNI configuration represented as a generic type `runtime.RawExtension`.
 
 ```golang
-// +genclient
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
 // CNI is the object used in ResourceClaim.specs.devices.config
 type CNI struct {
 	metav1.TypeMeta `json:",inline"`
@@ -38,13 +35,13 @@ type CNI struct {
 }
 ```
 
-Requests using the device class `cni.networking.k8s.io` must include exactly one configuration attached to it, so each configuration must point to a single request (one-to-one relationship between the config (CNI object) and the request). This configuration must specify the driver name `cni.dra.networking.k8s.io` and the corresponding CNI object in the `opaque.parameters` field. 
+Requests using the device class `cni.networking.x-k8s.io` must include exactly one configuration attached to it, so each configuration must point to a single request (one-to-one relationship between the config (CNI object) and the request). This configuration must specify the driver name `cni.dra.networking.x-k8s.io` and the corresponding CNI object in the `opaque.parameters` field. 
 
 Each request will configure one network interface in the pod.
 
 Here is an example below of a ResourceClaim definition that includes the CNI config and parameters:
 ```yaml
-apiVersion: resource.k8s.io/v1alpha3
+apiVersion: resource.k8s.io/v1beta1
 kind: ResourceClaim
 metadata:
   name: macvlan-eth0-attachment
@@ -52,16 +49,16 @@ spec:
   devices:
     requests:
     - name: macvlan-eth0
-      deviceClassName: cni.networking.k8s.io
+      deviceClassName: cni.networking.x-k8s.io
       allocationMode: ExactCount
       count: 1
     config:
     - requests:
       - macvlan-eth0
       opaque:
-        driver: cni.dra.networking.k8s.io
+        driver: cni.dra.networking.x-k8s.io
         parameters: # CNIParameters with the GVK, interface name and CNI Config (in YAML format).
-          apiVersion: cni.networking.k8s.io/v1alpha1
+          apiVersion: cni.networking.x-k8s.io/v1alpha1
           kind: CNI
           ifName: "net1"
           config:
@@ -87,7 +84,7 @@ A condition indicating the network interface has been created successfully will 
 
 Here is an example below of a full ResourceClaim object with its status:
 ```yaml
-apiVersion: resource.k8s.io/v1alpha3
+apiVersion: resource.k8s.io/v1beta1
 kind: ResourceClaim
 metadata:
   name: macvlan-eth0-attachment
@@ -95,9 +92,9 @@ spec:
   devices:
     config:
     - opaque:
-        driver: cni.dra.networking.k8s.io
+        driver: cni.dra.networking.x-k8s.io
         parameters:
-          apiVersion: cni.dra.networking.k8s.io/v1alpha1
+          apiVersion: cni.dra.networking.x-k8s.io/v1alpha1
           kind: CNI
           ifName: "net1"
           config:
@@ -116,16 +113,16 @@ spec:
     requests:
     - allocationMode: ExactCount
       count: 1
-      deviceClassName: cni.networking.k8s.io
+      deviceClassName: cni.networking.x-k8s.io
       name: macvlan-eth0
 status:
   allocation:
     devices:
       config:
       - opaque:
-          driver: cni.dra.networking.k8s.io
+          driver: cni.dra.networking.x-k8s.io
           parameters:
-            apiVersion: cni.dra.networking.k8s.io/v1alpha1
+            apiVersion: cni.dra.networking.x-k8s.io/v1alpha1
             kind: CNI
             ifName: "net1"
             config:
@@ -144,7 +141,7 @@ status:
         source: FromClaim
       results:
       - device: cni
-        driver: cni.dra.networking.k8s.io
+        driver: cni.dra.networking.x-k8s.io
         pool: kind-worker
         request: macvlan-eth0
     nodeSelector:
@@ -173,7 +170,7 @@ status:
         gateway: 10.10.1.1
         interface: 0
     device: cni
-    driver: cni.dra.networking.k8s.io
+    driver: cni.dra.networking.x-k8s.io
     networkData:
       addresses:
       - cidr: 10.10.1.2/24 # List of IPs 
@@ -199,9 +196,9 @@ TBD (Scheduling?)
 ### Validation
 
 ResourceClaim validation:
-* Each request utilizing the device class `cni.networking.k8s.io` must have one and only one config associated with it with the driver `cni.dra.networking.k8s.io`.
-* Each request utilizing the device class `cni.networking.k8s.io` must use the allocation mode `ExactCount` with count set to 1.
-* A ResourceClaim utilizing the device class `cni.networking.k8s.io` must be claimed by one and only one pod.
+* Each request utilizing the device class `cni.networking.x-k8s.io` must have one and only one config associated with it with the driver `cni.dra.networking.x-k8s.io`.
+* Each request utilizing the device class `cni.networking.x-k8s.io` must use the allocation mode `ExactCount` with count set to 1.
+* A ResourceClaim utilizing the device class `cni.networking.x-k8s.io` must be claimed by one and only one pod.
 
 Opaque Parameter validation:
 * All properties in the CNI object must be valid (e.g. `IfName`).
