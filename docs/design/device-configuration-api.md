@@ -204,7 +204,7 @@ ResourceClaim validation:
 * A ResourceClaim utilizing the device class `cni.networking.k8s.io` must be claimed by one and only one pod.
 
 Opaque Parameter validation:
-* All properties in the CNI object must be valid.
+* All properties in the CNI object must be valid (e.g. `IfName`).
 * The CNI config must follow correct syntax and semantics.
 * The validation does not check if the CNI plugin exists (This responsibility is on the scheduler)
 
