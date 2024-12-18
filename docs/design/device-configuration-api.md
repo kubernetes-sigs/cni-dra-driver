@@ -172,8 +172,8 @@ status:
     device: cni
     driver: cni.dra.networking.x-k8s.io
     networkData:
-      addresses:
-      - cidr: 10.10.1.2/24 # List of IPs 
+      ips:
+      - 10.10.1.2/24
       hardwareAddress: b2:af:6a:f9:12:3b
       interfaceName: net1
     pool: kind-worker
