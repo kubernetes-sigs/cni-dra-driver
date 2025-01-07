@@ -20,11 +20,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// +genclient
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// CNI is the object used in ResourceClaim.specs.devices.config
-type CNI struct {
+// CNIConfig is the object used in ResourceClaim.specs.devices.config opaque parameters.
+type CNIConfig struct {
 	metav1.TypeMeta `json:",inline"`
 
 	// IfName represents the name of the network interface requested.

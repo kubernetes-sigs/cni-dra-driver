@@ -6,9 +6,17 @@ This document defines the API and mechanism to configure and manage CNI network 
 
 The design aims to support all possible functionalities the Container Network Interface (CNI) project offers while ensuring compliance with its specifications.
 
+## Motivation
+
+Configuring and reporting network interfaces in Kubernetes currently lacks a standardized and native approach. Existing solutions such as [Multus](https://github.com/k8snetworkplumbingwg/multus-cni) address this challenge by relying on CNI, custom resources and pod annotations. However, these solutions do not provide a fully integrated and standardized method within Kubernetes. The Device Configuration API of the CNI-DRA-Driver aims to fill this gap by leveraging the CNI API together with the DRA API to provide a modern and more Kubernetes integrated mechanism to configure and report network interfaces on pods.
+
+This document defines the configuration API for configuring network interfaces on pods using CNI and outlines the behaviors and interactions during the operations (e.g. `ADD` and `DEL`) on the network interfaces and pods. The capabilities and limitations of this approach are also highlighted to ensure a clear understanding of its scope.
+
+Additionally, this solution will serve as a reference implementation for the [Multi-Network](https://github.com/kubernetes-sigs/multi-network) project and for the [KEP-4817 (Resource Claim Status With Possible Standardized Network Interface Data)](https://github.com/kubernetes/enhancements/blob/master/keps/sig-node/4817-resource-claim-device-status/README.md).
+
 ## Design
 
-A new API with the Kind `CNI` will be introduced under the `cni.networking.x-k8s.io` Group. This API will be providing the CNI configuration along with necessary parameters and optional fields for invoking CNI plugins. The configuration data specified in the `opaque.parameters` will be reflected in the ResourceClaim status by Kubernetes. This reported status will provide the necessary details for executing CNI operations such as `ADD` on pod creation and `DEL` on pod deletion which will enable seamless lifecycle management.
+A new API with the Kind `CNIConfig` will be introduced under the `cni.networking.x-k8s.io` Group. This API will be providing the CNI configuration along with necessary parameters and optional fields for invoking CNI plugins. The configuration data specified in the `opaque.parameters` will be reflected in the ResourceClaim status by Kubernetes. This reported status will provide the necessary details for executing CNI operations such as `ADD` on pod creation and `DEL` on pod deletion which will enable seamless lifecycle management.
 
 Each ResourceClaim can be claimed by at most one pod as the ResourceClaim status represents network interfaces configured specifically for that pod. Since the devices configured via CNI are pod scoped rather than container scoped, the ResourceClaims must be associated at the pod level.
 
@@ -18,13 +26,13 @@ To support scenarios where multiple network interfaces are required, a ResourceC
 
 ### Configuration
 
-This API defines the parameters and CNI configuration required to invoke CNI plugins. The CNI object encapsulates two fields:
+This API defines the parameters and CNI configuration required to invoke CNI plugins. The `CNIConfig` object encapsulates two fields:
 * `IfName`: specifies the name of the network interface to be configured.
 * `Config`: contains the CNI configuration represented as a generic type `runtime.RawExtension`.
 
 ```golang
-// CNI is the object used in ResourceClaim.specs.devices.config
-type CNI struct {
+// CNIConfig is the object used in ResourceClaim.specs.devices.config opaque parameters.
+type CNIConfig struct {
 	metav1.TypeMeta `json:",inline"`
 
 	// IfName represents the name of the network interface requested.
@@ -35,7 +43,7 @@ type CNI struct {
 }
 ```
 
-Requests using the device class `cni.networking.x-k8s.io` must include exactly one configuration attached to it, so each configuration must point to a single request (one-to-one relationship between the config (CNI object) and the request). This configuration must specify the driver name `cni.dra.networking.x-k8s.io` and the corresponding CNI object in the `opaque.parameters` field. 
+Requests using the device class `cni.networking.x-k8s.io` must include exactly one configuration attached to it, so each configuration must point to a single request (one-to-one relationship between the config (CNI object) and the request). This configuration must specify the driver name `cni.dra.networking.x-k8s.io` and the corresponding `CNIConfig` object in the `opaque.parameters` field. 
 
 Each request will configure one network interface in the pod.
 
@@ -201,8 +209,9 @@ ResourceClaim validation:
 * A ResourceClaim utilizing the device class `cni.networking.x-k8s.io` must be claimed by one and only one pod.
 
 Opaque Parameter validation:
-* All properties in the CNI object must be valid (e.g. `IfName`).
+* All properties in the `CNIConfig` object must be valid (e.g. `IfName`).
 * The CNI config must follow correct syntax and semantics.
+    * Note: A mechanism is first required from the CNI project to achieve this validation (see [containernetworking/cni#1132](https://github.com/containernetworking/cni/issues/1132)).
 * The validation does not check if the CNI plugin exists (This responsibility is on the scheduler)
 
 ## Related Resources
