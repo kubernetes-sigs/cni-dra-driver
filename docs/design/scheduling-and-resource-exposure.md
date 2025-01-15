@@ -28,11 +28,11 @@ This use case defines the scenario where a pod requires a logical/virtual networ
 
 #### 3. IP Pool Exhaustion
 
-As the number of pods in a cluster increases, IP address management becomes an issue. The IPAM is at risk of exhaustion which could prevent it from providing IPs to new pods, thus new pods should not be scheduled in that case. This issue can happen when a single subnet is shared between several nodes but also when a subnet is sliced per node (e.g. The Cluster subnet is `10.244.0.0/16` where Node-A will allocate IPs on subnet `10.244.1.0/24` and Node-B will allocate IPs on subnet `10.244.1.0/24`).
+As the number of pods in a cluster increases, IP address management becomes an issue. The IPAM is at risk of exhaustion which could prevent it from providing IPs to new pods, thus new pods should not be scheduled in that case. This issue can happen when a single subnet is shared between several nodes but also when a subnet is sliced per node (e.g. The Cluster subnet is `10.244.0.0/16` where Node-A will allocate IPs on subnet `10.244.0.0/24` and Node-B will allocate IPs on subnet `10.244.1.0/24`).
 
 #### 4. Virtual Network Identifier (VNI) Availability
 
-This use case addresses the need for allocating VNIs (VLAN ID, VxLAN ID...) for an network interface requested for a pod while ensuring no other network interface on the same host is using the same VNI. This is the case with, for example, the VLAN CNI Plugins. 
+This use case addresses the need for allocating VNIs (VLAN ID, VxLAN ID...) for an network interface requested for a pod while ensuring no other network interface on the same host is using the same VNI. This is the case with, for example, the VLAN CNI Plugins.
 
 #### 5. Bandwidth Limitation
 
@@ -40,9 +40,13 @@ This use case involves scenarios where application pods have specific QoS (Quali
 
 #### 6. CNI Availability
 
-This use case refers to the requirements that specific CNI plugins must be available and ready on nodes in order to be able to execute CNI operations.
+This use case refers to the requirements that specific CNI plugins must be available and ready on nodes in order to be able to execute CNI operations. The readiness of a CNI Plugin can be discovered via the `STATUS` operation.
 
-#### 7. CNI-Specific Attribute (e.g. Network)
+#### 7. Bonded Interface
+
+This use case covers scenarios where a pod requires a bonded network interface. This bonded network interface aggregates multiple network interfaces into a single logical interface. To support this, the scheduler must ensure that the node has the multiple network interfaces that can be bonded according to the configuration.
+
+#### 8. CNI-Specific Attribute (e.g. Network)
 
 While the previous use cases focus on specific CNI plugin behaviors, the possibilities and use-cases can be extended far beyond since CNI implementations can have their own attributes and configurations.
 
@@ -69,7 +73,7 @@ kind: ResourceSlice
 metadata:
   name: kind-worker-cni-dra-driver
 spec:
-  devices:
+  devices: # Devices (Network interfaces) on the host/node kind-worker
   - name: eth0
     basic:
       attributes:
@@ -157,7 +161,11 @@ TBD
 
 TBD
 
-#### Use Cases 7. CNI-Specific Attribute (e.g. Network)
+#### Use Cases 7. Bonded Interface
+
+TBD
+
+#### Use Cases 8. CNI-Specific Attribute (e.g. Network)
 
 <!-- The composition of multiple network resources could solve more complex use cases in a simpler and more efficient way, enabling greater flexibility in network configuration and deployment. -->
 
