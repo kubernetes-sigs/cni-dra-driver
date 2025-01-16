@@ -4,7 +4,7 @@
 
 This document defines the mechanism to expose and consume network resources in Kubernetes using DRA. It describes how the Kubernetes Scheduler can identify nodes where the CNI-DRA-Driver will be capable of configuring network interfaces according to the specifications defined by the user (described in the `Device Configuration API` document).
 
-The design aims to support as many use cases as possible while ensuring compliance with the specifications of the Container Network Interface (CNI) project.
+The design aims to support as many use cases as possible while ensuring compliance with the specifications of the Container Network Interface (CNI) project. This design will focus first on addressing scheduling challenges specifically for the CNI plugins provided by the CNI community.
 
 ## Motivation
 
@@ -20,11 +20,11 @@ The CNI-DRA-Driver enables a broad range of use cases within Kubernetes. The fol
 
 #### 1. Full Device
 
-This use case defines the scenario where a pod gets the exclusive access to a physical network interface. The network interface, when unclaimed, is configured on the node but will be moved/injected on the pod during the pod creation making it no longer accessible on this to any other future pod requesting similar network interface access. Other pods requesting the same network interface must be scheduled on a node where the network interface exists and is not already claimed. This is the case with, for example, the Host-Device CNI Plugins. 
+This use case defines the scenario where a pod gets the exclusive access to a physical network interface. The network interface, when unclaimed, is configured on the node but will be moved/injected on the pod during the pod creation making it no longer accessible on this to any other future pod requesting similar network interface access. Other pods requesting the same network interface must be scheduled on a node where the network interface exists and is not already claimed. This is the case with, for example, the [Host-Device](https://www.cni.dev/plugins/current/main/host-device/) CNI Plugins. 
 
 #### 2. Virtual Device (Based on Master Interface)
 
-This use case defines the scenario where a pod requires a logical/virtual network interface mapped to another network interface (master interface). The pod will then have to be scheduled on a node where the master interface exists. This is the case with, for example, the MACVLAN and the VLAN CNI Plugins. 
+This use case defines the scenario where a pod requires a logical/virtual network interface mapped to another network interface (master interface). The pod will then have to be scheduled on a node where the master interface exists. This is the case with, for example, the [MACVLAN](https://www.cni.dev/plugins/current/main/macvlan/) and the [VLAN](https://www.cni.dev/plugins/current/main/vlan/) CNI Plugins. 
 
 #### 3. IP Pool Exhaustion
 
@@ -32,25 +32,23 @@ As the number of pods in a cluster increases, IP address management becomes an i
 
 #### 4. Virtual Network Identifier (VNI) Availability
 
-This use case addresses the need for allocating VNIs (VLAN ID, VxLAN ID...) for an network interface requested for a pod while ensuring no other network interface on the same host is using the same VNI. This is the case with, for example, the VLAN CNI Plugins.
+This use case addresses the need for allocating VNIs (VLAN ID, VxLAN ID...) for an network interface requested for a pod while ensuring no other network interface on the same host is using the same VNI. This is the case with, for example, the [VLAN](https://www.cni.dev/plugins/current/main/vlan/) CNI Plugin.
 
 #### 5. Bandwidth Limitation
 
-This use case involves scenarios where application pods have specific QoS (Quality of Service) requirement and/or expect some minimum guaranteed performance per network interface. Pods with such requirements must then be scheduled on nodes with sufficient bandwidth capacity. Other scheduled pods must not impact the performance of already running pods. For example, if a pod requests 500 Mbps on a network interface providing 1 Gbps, no additional pod requestiing more than 500 Mbps (or with no bandwidth limits) should be scheduled on that node.
+This use case involves scenarios where application pods have specific QoS (Quality of Service) requirement and/or expect some minimum guaranteed performance per network interface. Pods with such requirements must then be scheduled on nodes with sufficient bandwidth capacity. Other scheduled pods must not impact the performance of already running pods. For example, if a pod requests 500 Mbps on a network interface providing 1 Gbps, no additional pod requestiing more than 500 Mbps (or with no bandwidth limits) should be scheduled on that node. This is the case with, for example, the [bandwidth](https://www.cni.dev/plugins/current/meta/bandwidth/) meta CNI Plugin.
 
 #### 6. CNI Availability
 
 This use case refers to the requirements that specific CNI plugins must be available and ready on nodes in order to be able to execute CNI operations. The readiness of a CNI Plugin can be discovered via the `STATUS` operation.
 
-#### 7. Bonded Interface
-
-This use case covers scenarios where a pod requires a bonded network interface. This bonded network interface aggregates multiple network interfaces into a single logical interface. To support this, the scheduler must ensure that the node has the multiple network interfaces that can be bonded according to the configuration.
-
-#### 8. CNI-Specific Attribute (e.g. Network)
+### CNI-Specific Attribute (e.g. Network) Use Cases
 
 While the previous use cases focus on specific CNI plugin behaviors, the possibilities and use-cases can be extended far beyond since CNI implementations can have their own attributes and configurations.
 
 For instance, internal networks (e.g. secondary overlay network) could be created and made available only on specific nodes by a CNI plugin. This requires pods requesting access to these networks to be scheduled accordingly. 
+
+Another example could be the scenario where a pod requires a bonded network interface. This bonded network interface aggregates multiple network interfaces into a single logical interface. To support this, the scheduler must ensure that the node has the multiple network interfaces that can be bonded according to the configuration.
 
 ## Design
 
@@ -143,6 +141,8 @@ status:
 
 #### Use Cases 2. Virtual Device (Based on Master Interface)
 
+TBD
+
 <!-- Sharing a single device between several ResourceClaims -->
 
 #### Use Cases 3. IP Pool Exhaustion
@@ -161,11 +161,9 @@ TBD
 
 TBD
 
-#### Use Cases 7. Bonded Interface
+### CNI-Specific Attribute (e.g. Network) Use Cases Design
 
 TBD
-
-#### Use Cases 8. CNI-Specific Attribute (e.g. Network)
 
 <!-- The composition of multiple network resources could solve more complex use cases in a simpler and more efficient way, enabling greater flexibility in network configuration and deployment. -->
 
