@@ -343,3 +343,62 @@ func newResourceClaim(
 		},
 	}
 }
+
+func TestRuntime_AttachNetworks_RequestSelection(t *testing.T) {
+	tests := []struct {
+		name     string
+		request  string
+		requests []string
+		wantErr  bool
+	}{
+		{name: "all requests", request: "request-1"},
+		{name: "all requests with a selected subrequest", request: "request-1/first"},
+		{name: "parent request", request: "request-1/first", requests: []string{"request-1"}},
+		{name: "parent request among selectors", request: "request-1/first", requests: []string{"unrelated", "request-1"}},
+		{name: "exact subrequest", request: "request-1/first", requests: []string{"request-1/first"}},
+		{name: "sibling subrequest is not selected", request: "request-1/second", requests: []string{"request-1/first"}, wantErr: true},
+		{name: "request prefix is not a parent", request: "request-10/first", requests: []string{"request-1"}, wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rs := requestStatusList[0]
+			claim := newResourceClaim(
+				[]resourcev1.DeviceRequestAllocationResult{{
+					Request: tt.request,
+					Driver:  rs.Driver,
+					Pool:    rs.Pool,
+					Device:  rs.Device,
+				}},
+				[]resourcev1.DeviceAllocationConfiguration{{
+					Source:   resourcev1.AllocationConfigSourceClaim,
+					Requests: tt.requests,
+					DeviceConfiguration: resourcev1.DeviceConfiguration{
+						Opaque: &resourcev1.OpaqueDeviceConfiguration{
+							Driver:     driverName,
+							Parameters: rs.getRequestStatus(),
+						},
+					},
+				}},
+				nil,
+			)
+			want := claim.DeepCopy()
+			if !tt.wantErr {
+				want.Status.Devices = []resourcev1.AllocatedDeviceStatus{{
+					Driver:      rs.Driver,
+					Pool:        rs.Pool,
+					Device:      rs.Device,
+					Data:        &rs.allocatedDeviceStatusData,
+					NetworkData: rs.networkData,
+				}}
+			}
+			rntm := &cni.Runtime{CNIConfig: newMockLibCNIConfig(), DriverName: driverName}
+			got, err := rntm.AttachNetworks(context.Background(), "pod-id", "pod-uid", "pod-name", "pod-namespace", "pod-net-ns", claim)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("AttachNetworks() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("AttachNetworks() = %v, want %v", got, want)
+			}
+		})
+	}
+}
