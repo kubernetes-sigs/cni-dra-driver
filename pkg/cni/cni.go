@@ -24,6 +24,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"slices"
+	"strings"
 
 	"github.com/containernetworking/cni/libcni"
 	cnitypes "github.com/containernetworking/cni/pkg/types"
@@ -84,8 +86,17 @@ func (rntm *Runtime) AttachNetworks(
 			continue
 		}
 
-		for _, request := range config.Requests {
-			if _, exists := requestConfig[request]; exists {
+		for _, result := range claim.Status.Allocation.Devices.Results {
+			if result.Driver != rntm.DriverName {
+				continue
+			}
+			requestName, _, _ := strings.Cut(result.Request, "/")
+			if len(config.Requests) > 0 &&
+				!slices.Contains(config.Requests, result.Request) &&
+				!slices.Contains(config.Requests, requestName) {
+				continue
+			}
+			if _, exists := requestConfig[result.Request]; exists {
 				continue // Multiple Config for a single request is not supported.
 			}
 
@@ -95,7 +106,7 @@ func (rntm *Runtime) AttachNetworks(
 				continue
 			}
 
-			requestConfig[request] = cniConfig
+			requestConfig[result.Request] = cniConfig
 		}
 	}
 
